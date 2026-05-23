@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,59 +11,54 @@
   <main class="app-shell">
     <section class="hero-card">
       <div>
-        <p class="eyebrow">Personal Budget Monitor</p>
-        <h1>Salary Radar</h1>
-        <p class="subtitle">Track bills, shopping, visa card spending, savings, and the mysterious money leaks that keep humanity humble.</p>
+        <div class="top-line">
+          <p class="eyebrow" data-i18n="eyebrow">Personal Budget Monitor</p>
+          <button id="languageToggle" class="lang-toggle" type="button">العربية</button>
+        </div>
+        <h1 data-i18n="appTitle">Salary Radar</h1>
+        <p class="subtitle" data-i18n="subtitle">Track bills, shopping, visa card spending, savings, and the mysterious money leaks that keep humanity humble.</p>
       </div>
       <div class="salary-box">
-        <label for="salaryInput">Monthly salary</label>
-        <div class="money-input"><span>SAR</span><input id="salaryInput" type="number" min="0" placeholder="0" /></div>
-        <button id="saveSalary">Save salary</button>
+        <label for="salaryInput" data-i18n="monthlySalary">Monthly salary</label>
+        <div class="money-input"><span data-i18n="currency">SAR</span><input id="salaryInput" type="number" min="0" placeholder="0" /></div>
+        <button id="saveSalary" data-i18n="saveSalary">Save salary</button>
       </div>
     </section>
 
     <section class="summary-grid">
-      <article class="stat-card safe"><span>Remaining</span><strong id="remainingAmount">SAR 0</strong><small id="remainingNote">Set salary to begin</small></article>
-      <article class="stat-card danger"><span>Spent</span><strong id="spentAmount">SAR 0</strong><small id="spentPercent">0% of salary</small></article>
-      <article class="stat-card calm"><span>Saved</span><strong id="savedAmount">SAR 0</strong><small id="savingsPercent">0% of salary</small></article>
-      <article class="stat-card warning"><span>Daily safe spend</span><strong id="dailyBudget">SAR 0</strong><small>For the rest of this month</small></article>
+      <article class="stat-card safe"><span data-i18n="remaining">Remaining</span><strong id="remainingAmount">SAR 0</strong><small id="remainingNote">Set salary to begin</small></article>
+      <article class="stat-card danger"><span data-i18n="spent">Spent</span><strong id="spentAmount">SAR 0</strong><small id="spentPercent">0% of salary</small></article>
+      <article class="stat-card calm"><span data-i18n="saved">Saved</span><strong id="savedAmount">SAR 0</strong><small id="savingsPercent">0% of salary</small></article>
+      <article class="stat-card warning"><span data-i18n="dailySafeSpend">Daily safe spend</span><strong id="dailyBudget">SAR 0</strong><small data-i18n="dailyNote">For the rest of this month</small></article>
     </section>
 
     <section class="dashboard-grid">
       <article class="panel add-panel">
-        <h2>Add transaction</h2>
+        <h2 data-i18n="addTransactionTitle">Add transaction</h2>
         <div class="form-grid">
-          <input id="itemName" placeholder="Name, e.g. Electricity bill" />
-          <input id="itemAmount" type="number" min="0" placeholder="Amount" />
-          <select id="itemCategory">
-            <option>Bills</option>
-            <option>Shopping</option>
-            <option>Visa Card</option>
-            <option>Food</option>
-            <option>Transport</option>
-            <option>Savings</option>
-            <option>Other</option>
-          </select>
+          <input id="itemName" data-i18n-placeholder="itemNamePlaceholder" placeholder="Name, e.g. Electricity bill" />
+          <input id="itemAmount" type="number" min="0" data-i18n-placeholder="amountPlaceholder" placeholder="Amount" />
+          <select id="itemCategory"></select>
           <input id="itemDate" type="date" />
         </div>
-        <button id="addTransaction" class="primary">Add</button>
-        <button id="resetMonth" class="ghost">Reset month</button>
+        <button id="addTransaction" class="primary" data-i18n="add">Add</button>
+        <button id="resetMonth" class="ghost" data-i18n="resetMonth">Reset month</button>
       </article>
 
       <article class="panel chart-panel">
-        <h2>Where your salary went</h2>
+        <h2 data-i18n="chartTitle">Where your salary went</h2>
         <canvas id="categoryChart"></canvas>
       </article>
 
       <article class="panel mood-panel">
-        <h2>Money mood</h2>
+        <h2 data-i18n="moneyMood">Money mood</h2>
         <div class="meter"><div id="meterFill"></div></div>
         <p id="moodText">Waiting for data. Suspense, but financial.</p>
         <div class="tips" id="tipsBox"></div>
       </article>
 
       <article class="panel list-panel">
-        <div class="list-head"><h2>Transactions</h2><button id="exportData">Export JSON</button></div>
+        <div class="list-head"><h2 data-i18n="transactions">Transactions</h2><button id="exportData" data-i18n="exportJson">Export JSON</button></div>
         <div id="transactionList" class="transaction-list"></div>
       </article>
     </section>
