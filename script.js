@@ -1,28 +1,23 @@
-const STORAGE_KEY = 'salary-radar-v4';
-const OLD_STORAGE_KEYS = ['salary-radar-v3', 'salary-radar-v2', 'salary-radar-v1'];
+const STORAGE_KEY = 'salary-radar-v5';
+const OLD_STORAGE_KEYS = ['salary-radar-v4', 'salary-radar-v3', 'salary-radar-v2', 'salary-radar-v1'];
 const SALARY_DAY = 27;
-
 const categories = ['Bills', 'Shopping', 'Visa Card', 'Food', 'Transport', 'Savings', 'Other'];
 let parsedImports = [];
 let lastImportMeta = { filesRead: 0, ignored: 0, outsideCycle: 0, cycle: null };
+let categoryChart;
 
 const translations = {
   en: {
     htmlLang: 'en', dir: 'ltr', toggle: 'العربية', currency: 'SAR',
     eyebrow: 'Personal Budget Monitor', appTitle: 'Salary Radar',
     subtitle: 'Track bills, shopping, visa card spending, savings, and the mysterious money leaks that keep humanity humble.',
-    monthlySalary: 'Monthly salary', saveSalary: 'Save salary', remaining: 'Remaining', spent: 'Spent', saved: 'Saved',
-    dailySafeSpend: 'Daily safe spend', dailyNote: 'For the rest of this salary cycle',
-    importEyebrow: 'Smart file import', importTitle: 'Analyze bank / Visa files',
-    importSubtitle: 'Upload Excel, CSV, or PDF statements. Only expenses inside your salary cycle are imported: day 27 to day 26.',
+    monthlySalary: 'Monthly salary', saveSalary: 'Save salary', remaining: 'Remaining', spent: 'Spent', saved: 'Saved', dailySafeSpend: 'Daily safe spend', dailyNote: 'For the rest of this salary cycle',
+    importEyebrow: 'Smart file import', importTitle: 'Analyze bank / Visa files', importSubtitle: 'Upload Excel, CSV, or PDF statements. Only expenses inside your salary cycle are imported: day 27 to day 26.',
     analyzeFiles: 'Analyze files', importParsed: 'Import detected expenses', salaryCycle: 'Salary cycle', outsideCycle: 'Outside cycle ignored',
-    addTransactionTitle: 'Add transaction', itemNamePlaceholder: 'Name, e.g. Electricity bill', amountPlaceholder: 'Amount', add: 'Add', resetMonth: 'Reset cycle',
-    chartTitle: 'Where your salary went', moneyMood: 'Money mood', transactions: 'Transactions', exportJson: 'Export JSON', ofSalary: 'of salary', noDate: 'No date', delete: 'Delete',
-    empty: 'No transactions yet. Suspiciously peaceful.', noFile: 'Choose at least one file first.', analyzing: 'Analyzing files locally...',
-    detected: 'Detected cycle expenses', detectedTotal: 'Cycle expenses total', ignoredCredits: 'Ignored credits/income', filesRead: 'Files read',
-    noDetected: 'No expenses detected inside the salary cycle. Either the file format is unusual, or the bank invented a new way to annoy everyone.',
-    importedOk: 'Imported cycle expenses successfully.', importedFrom: 'Imported from', previewLimit: 'Showing first 40 detected expenses from the selected salary cycle.',
-    alertInvalid: 'Add a name and valid amount. The budget goblin demands basic effort.', confirmReset: 'Reset all transactions for this salary cycle? Salary will stay saved.',
+    addTransactionTitle: 'Add transaction', itemNamePlaceholder: 'Name, e.g. Electricity bill', amountPlaceholder: 'Amount', add: 'Add', resetMonth: 'Reset cycle', chartTitle: 'Where your salary went', moneyMood: 'Money mood', transactions: 'Transactions', exportJson: 'Export JSON',
+    ofSalary: 'of salary', noDate: 'No date', delete: 'Delete', empty: 'No transactions yet. Suspiciously peaceful.', noFile: 'Choose at least one file first.', analyzing: 'Analyzing files locally...', detected: 'Detected cycle expenses', detectedTotal: 'Cycle expenses total', ignoredCredits: 'Ignored credits/income', filesRead: 'Files read',
+    noDetected: 'No expenses detected inside the salary cycle. Either the file format is unusual, or the bank invented a new way to annoy everyone.', importedOk: 'Imported cycle expenses successfully.', importedFrom: 'Imported from', previewLimit: 'Showing first 40 detected expenses from the selected salary cycle.',
+    resetDone: 'Cycle transactions cleared.', alertInvalid: 'Add a name and valid amount. The budget goblin demands basic effort.', confirmReset: 'Reset all transactions for this salary cycle? Salary and language will stay saved.',
     notes: { noSalary: 'Set salary to begin', healthy: 'Healthy. Try not to celebrate by buying something ridiculous.', over: 'Over budget. The salary has left the chat.', danger: 'Danger zone. Wallet is making horror movie noises.', careful: 'Careful. Spending is getting confident.' },
     mood: { calm: 'Calm. Your money is behaving like it had parents.', noSalary: 'Enter your salary first. A budget without salary is just decorative anxiety.', critical: 'Critical. You spent more than your salary. This is how banks get villain origin stories.', danger: 'Danger. Keep spending only on survival-level things: food, fuel, bills, and not another gadget.', warning: 'Warning. You are not broke, but the budget is starting to side-eye you.' },
     tips: { start: 'Start by adding fixed bills first, then visa card payments, then shopping.', freeze: 'Freeze non-essential shopping until next salary.', visa: 'Check Visa Card transactions first, because small swipes breed in the dark.', daily: 'Use the daily safe spend number as your hard ceiling.', delay: 'Delay optional purchases for 48 hours before buying.', moveSavings: 'Move savings immediately after salary arrives.', groupSmall: 'Group small purchases under Shopping so leaks become visible.', good: 'Good zone. Keep bills and Visa Card updated weekly.', saveTarget: 'Try saving at least 10–20% before shopping starts whispering.', lowSavings: 'Savings are under 10%. Future-you is already filing a complaint.' },
@@ -30,20 +25,14 @@ const translations = {
   },
   ar: {
     htmlLang: 'ar', dir: 'rtl', toggle: 'English', currency: 'ر.س',
-    eyebrow: 'مراقبة الميزانية الشخصية', appTitle: 'رادار الراتب',
-    subtitle: 'تابع الفواتير، التسوق، بطاقة الفيزا، الادخار، وتسريبات المال الغامضة التي تجعل الراتب يختفي وكأنه دخل بوابة زمنية.',
-    monthlySalary: 'الراتب الشهري', saveSalary: 'حفظ الراتب', remaining: 'المتبقي', spent: 'المصروف', saved: 'المدخر',
-    dailySafeSpend: 'الصرف اليومي الآمن', dailyNote: 'لباقي دورة الراتب',
-    importEyebrow: 'استيراد ذكي', importTitle: 'تحليل ملفات البنك / الفيزا',
-    importSubtitle: 'ارفع ملفات Excel أو CSV أو PDF. سيتم استيراد مصروفات دورة الراتب فقط: من يوم 27 إلى يوم 26.',
+    eyebrow: 'مراقبة الميزانية الشخصية', appTitle: 'رادار الراتب', subtitle: 'تابع الفواتير، التسوق، بطاقة الفيزا، الادخار، وتسريبات المال الغامضة التي تجعل الراتب يختفي وكأنه دخل بوابة زمنية.',
+    monthlySalary: 'الراتب الشهري', saveSalary: 'حفظ الراتب', remaining: 'المتبقي', spent: 'المصروف', saved: 'المدخر', dailySafeSpend: 'الصرف اليومي الآمن', dailyNote: 'لباقي دورة الراتب',
+    importEyebrow: 'استيراد ذكي', importTitle: 'تحليل ملفات البنك / الفيزا', importSubtitle: 'ارفع ملفات Excel أو CSV أو PDF. سيتم استيراد مصروفات دورة الراتب فقط: من يوم 27 إلى يوم 26.',
     analyzeFiles: 'تحليل الملفات', importParsed: 'استيراد المصروفات المكتشفة', salaryCycle: 'دورة الراتب', outsideCycle: 'خارج الدورة تم تجاهله',
-    addTransactionTitle: 'إضافة عملية', itemNamePlaceholder: 'الاسم، مثال: فاتورة الكهرباء', amountPlaceholder: 'المبلغ', add: 'إضافة', resetMonth: 'تصفير الدورة',
-    chartTitle: 'أين ذهب الراتب؟', moneyMood: 'مزاج الميزانية', transactions: 'العمليات', exportJson: 'تصدير JSON', ofSalary: 'من الراتب', noDate: 'بدون تاريخ', delete: 'حذف',
-    empty: 'لا توجد عمليات بعد. هدوء مالي مثير للشك.', noFile: 'اختر ملفًا واحدًا على الأقل أولًا.', analyzing: 'جاري تحليل الملفات محليًا...',
-    detected: 'مصروفات الدورة المكتشفة', detectedTotal: 'إجمالي مصروفات الدورة', ignoredCredits: 'الدخل/المدفوعات المتجاهلة', filesRead: 'الملفات المقروءة',
-    noDetected: 'لم يتم اكتشاف مصروفات داخل دورة الراتب. إما أن صيغة الملف غريبة، أو أن البنك اخترع طريقة جديدة لتعذيب البشر.',
-    importedOk: 'تم استيراد مصروفات الدورة بنجاح.', importedFrom: 'مستورد من', previewLimit: 'يتم عرض أول 40 مصروفًا من دورة الراتب المحددة.',
-    alertInvalid: 'أدخل اسمًا ومبلغًا صحيحًا. حتى وحش الميزانية يحتاج معلومات بسيطة.', confirmReset: 'هل تريد تصفير عمليات دورة الراتب؟ سيتم الاحتفاظ بالراتب.',
+    addTransactionTitle: 'إضافة عملية', itemNamePlaceholder: 'الاسم، مثال: فاتورة الكهرباء', amountPlaceholder: 'المبلغ', add: 'إضافة', resetMonth: 'تصفير الدورة', chartTitle: 'أين ذهب الراتب؟', moneyMood: 'مزاج الميزانية', transactions: 'العمليات', exportJson: 'تصدير JSON',
+    ofSalary: 'من الراتب', noDate: 'بدون تاريخ', delete: 'حذف', empty: 'لا توجد عمليات بعد. هدوء مالي مثير للشك.', noFile: 'اختر ملفًا واحدًا على الأقل أولًا.', analyzing: 'جاري تحليل الملفات محليًا...', detected: 'مصروفات الدورة المكتشفة', detectedTotal: 'إجمالي مصروفات الدورة', ignoredCredits: 'الدخل/المدفوعات المتجاهلة', filesRead: 'الملفات المقروءة',
+    noDetected: 'لم يتم اكتشاف مصروفات داخل دورة الراتب. إما أن صيغة الملف غريبة، أو أن البنك اخترع طريقة جديدة لتعذيب البشر.', importedOk: 'تم استيراد مصروفات الدورة بنجاح.', importedFrom: 'مستورد من', previewLimit: 'يتم عرض أول 40 مصروفًا من دورة الراتب المحددة.',
+    resetDone: 'تم تصفير عمليات الدورة.', alertInvalid: 'أدخل اسمًا ومبلغًا صحيحًا. حتى وحش الميزانية يحتاج معلومات بسيطة.', confirmReset: 'هل تريد تصفير عمليات دورة الراتب؟ سيتم الاحتفاظ بالراتب واللغة.',
     notes: { noSalary: 'أدخل الراتب للبدء', healthy: 'الوضع صحي. لا تحتفل بشراء شيء لا تحتاجه، نعرف هذه الحركة.', over: 'تجاوزت الميزانية. الراتب غادر المحادثة.', danger: 'منطقة خطرة. المحفظة تصدر أصوات فيلم رعب.', careful: 'انتبه. الصرف بدأ يأخذ ثقة زائدة.' },
     mood: { calm: 'هادئ. أموالك تتصرف وكأن عندها تربية.', noSalary: 'أدخل الراتب أولًا. ميزانية بدون راتب مجرد قلق بزخرفة جميلة.', critical: 'حرج. صرفت أكثر من راتبك. هكذا تبدأ البنوك قصص الشر.', danger: 'خطر. اصرف فقط على الضروريات: أكل، بنزين، فواتير، وليس جهازًا جديدًا كالعادة.', warning: 'تحذير. لست مفلسًا، لكن الميزانية بدأت تنظر لك بنظرة اتهام.' },
     tips: { start: 'ابدأ بإضافة الفواتير الثابتة، ثم دفعات الفيزا، ثم التسوق.', freeze: 'أوقف التسوق غير الضروري إلى الراتب القادم.', visa: 'راجع عمليات بطاقة الفيزا أولًا، لأن السحبات الصغيرة تتكاثر في الظلام.', daily: 'استخدم رقم الصرف اليومي الآمن كسقف لا تتجاوزه.', delay: 'أجل المشتريات الاختيارية 48 ساعة قبل الشراء.', moveSavings: 'حوّل الادخار مباشرة بعد نزول الراتب.', groupSmall: 'اجمع المشتريات الصغيرة تحت التسوق حتى تظهر التسريبات.', good: 'منطقة جيدة. حدّث الفواتير والفيزا أسبوعيًا.', saveTarget: 'حاول ادخار 10–20% قبل أن يبدأ التسوق بالوسوسة.', lowSavings: 'الادخار أقل من 10%. نسختك المستقبلية تقدّم شكوى رسمية.' },
@@ -55,266 +44,42 @@ let state = { salary: 0, language: 'en', transactions: [] };
 const $ = (id) => document.getElementById(id);
 const currentText = () => translations[state.language || 'en'];
 const categoryColors = { Bills: '#60a5fa', Shopping: '#a78bfa', 'Visa Card': '#fb7185', Food: '#facc15', Transport: '#22d3ee', Savings: '#4ade80', Other: '#94a3b8' };
-let categoryChart;
 
-function money(value) {
-  const t = currentText();
-  const locale = state.language === 'ar' ? 'ar-SA' : undefined;
-  return `${t.currency} ${Number(value || 0).toLocaleString(locale, { maximumFractionDigits: 2 })}`;
-}
-function parseMoney(value) {
-  if (value === null || value === undefined) return 0;
-  const text = String(value).replace(/SAR|ر\.س/g, '').replace(/,/g, '').trim();
-  const isCredit = /\bCR\b|credit|payment received|حوالات|الواردة|دائن/i.test(String(value));
-  const match = text.match(/-?\d+(\.\d+)?/);
-  if (!match) return 0;
-  const amount = Number(match[0]);
-  return isCredit ? -Math.abs(amount) : amount;
-}
-function normalizeDate(value) {
-  if (!value) return '';
-  const text = String(value).trim();
-  const iso = text.match(/20\d{2}[\/\-]\d{1,2}[\/\-]\d{1,2}/);
-  if (iso) return iso[0].replaceAll('/', '-').split('-').map((p, i) => i === 0 ? p : p.padStart(2, '0')).join('-');
-  const m = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-  if (!m) return '';
-  let [_, d, mo, y] = m;
-  if (y.length === 2) y = `20${y}`;
-  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
-}
-function toDate(dateText) {
-  if (!dateText) return null;
-  const d = new Date(`${dateText}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+function money(value) { const t = currentText(); const locale = state.language === 'ar' ? 'ar-SA' : undefined; return `${t.currency} ${Number(value || 0).toLocaleString(locale, { maximumFractionDigits: 2 })}`; }
+function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+function cleanDescription(text) { return String(text || '').replace(/\s+/g, ' ').replace(/Amount:.*/i, '').replace(/\*\*|ملاحظة|الوقت/g, '').trim().slice(0, 90); }
+function parseMoney(value) { if (value == null) return 0; const raw = String(value); const text = raw.replace(/SAR|ر\.س/g, '').replace(/,/g, '').trim(); const isCredit = /\bCR\b|credit|payment received|حوالات|الواردة|دائن/i.test(raw); const match = text.match(/-?\d+(\.\d+)?/); if (!match) return 0; const amount = Number(match[0]); return isCredit ? -Math.abs(amount) : amount; }
+function normalizeDate(value) { if (!value) return ''; const text = String(value).trim(); const iso = text.match(/20\d{2}[\/\-]\d{1,2}[\/\-]\d{1,2}/); if (iso) return iso[0].replaceAll('/', '-').split('-').map((p, i) => i === 0 ? p : p.padStart(2, '0')).join('-'); const m = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if (!m) return ''; let [, d, mo, y] = m; if (y.length === 2) y = `20${y}`; return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`; }
+function toDate(dateText) { if (!dateText) return null; const d = new Date(`${dateText}T00:00:00`); return Number.isNaN(d.getTime()) ? null : d; }
 function dateKey(d) { return d.toISOString().slice(0, 10); }
-function getSalaryCycleForDate(dateText) {
-  const d = toDate(dateText) || new Date();
-  let startYear = d.getFullYear();
-  let startMonth = d.getMonth();
-  if (d.getDate() < SALARY_DAY) startMonth -= 1;
-  const start = new Date(startYear, startMonth, SALARY_DAY);
-  const end = new Date(start.getFullYear(), start.getMonth() + 1, SALARY_DAY - 1);
-  return { start: dateKey(start), end: dateKey(end) };
-}
-function detectSalaryCycle(rows) {
-  const salaryRows = rows.filter(r => r.isSalary || /payroll|salary|راتب|وزارة الصحة/i.test(r.name || ''));
-  const datedSalaryRows = salaryRows.filter(r => toDate(r.date)).sort((a, b) => toDate(b.date) - toDate(a.date));
-  if (datedSalaryRows.length) return getSalaryCycleForDate(datedSalaryRows[0].date);
-  const datedRows = rows.filter(r => toDate(r.date)).sort((a, b) => toDate(b.date) - toDate(a.date));
-  return getSalaryCycleForDate(datedRows[0]?.date || new Date().toISOString().slice(0, 10));
-}
+function getSalaryCycleForDate(dateText) { const d = toDate(dateText) || new Date(); let startMonth = d.getMonth(); if (d.getDate() < SALARY_DAY) startMonth -= 1; const start = new Date(d.getFullYear(), startMonth, SALARY_DAY); const end = new Date(start.getFullYear(), start.getMonth() + 1, SALARY_DAY - 1); return { start: dateKey(start), end: dateKey(end) }; }
+function detectSalaryCycle(rows) { const salaryRows = rows.filter(r => r.isSalary || /payroll|salary|راتب|وزارة الصحة/i.test(r.name || '')); const datedSalaryRows = salaryRows.filter(r => toDate(r.date)).sort((a, b) => toDate(b.date) - toDate(a.date)); if (datedSalaryRows.length) return getSalaryCycleForDate(datedSalaryRows[0].date); const datedRows = rows.filter(r => toDate(r.date)).sort((a, b) => toDate(b.date) - toDate(a.date)); return getSalaryCycleForDate(datedRows[0]?.date || new Date().toISOString().slice(0, 10)); }
 function isInsideCycle(dateText, cycle) { return !!dateText && dateText >= cycle.start && dateText <= cycle.end; }
 function formatCycle(cycle) { return cycle ? `${cycle.start} → ${cycle.end}` : `Day ${SALARY_DAY} → 26`; }
-function daysLeftInSalaryCycle() {
-  const cycle = getSalaryCycleForDate(new Date().toISOString().slice(0, 10));
-  const today = new Date();
-  const end = toDate(cycle.end) || today;
-  return Math.max(1, Math.ceil((end - today) / 86400000) + 1);
-}
+function daysLeftInSalaryCycle() { const cycle = getSalaryCycleForDate(new Date().toISOString().slice(0, 10)); const today = new Date(); const end = toDate(cycle.end) || today; return Math.max(1, Math.ceil((end - today) / 86400000) + 1); }
+function categorize(description) { const d = String(description || '').toLowerCase(); if (/visa|mastercard|card ending|بطاق|advance payment|murabaha|sadad|stc|electric|water|bill|fee|installment|قسط|رسوم/.test(d)) return 'Bills'; if (/hunger|keeta|toyou|restaurant|coffee|starbucks|barns|panda|grocery|tamwinat|tmwynat|تموين|بقال|food|مطعم|سوبر|market|aswag/.test(d)) return 'Food'; if (/pharmacy|medical|nahdi|lab|delta|صيد|مختبر|medical|مستشفى/.test(d)) return 'Bills'; if (/petrol|fuel|gas|uber|careem|transport|محطة|بنزين/.test(d)) return 'Transport'; if (/salary|payroll|deposit|savings|ادخار|راتب/.test(d)) return 'Savings'; if (/amazon|red tag|centrepoint|apple|google|steam|tabby|tamara|store|suppl|shop|mall|casht|noon|jarir|جوجل|شراء|متجر/.test(d)) return 'Shopping'; return 'Other'; }
 
-function categorize(description) {
-  const d = String(description || '').toLowerCase();
-  if (/visa|mastercard|card ending|بطاق|advance payment|murabaha|sadad|stc|electric|water|bill|fee|installment|قسط|رسوم/.test(d)) return 'Bills';
-  if (/hunger|keeta|toyou|restaurant|coffee|starbucks|barns|panda|grocery|tamwinat|tmwynat|تموين|بقال|food|مطعم|سوبر|market|aswag/.test(d)) return 'Food';
-  if (/pharmacy|medical|nahdi|lab|delta|صيد|مختبر|medical|مستشفى/.test(d)) return 'Bills';
-  if (/petrol|fuel|gas|uber|careem|transport|محطة|بنزين/.test(d)) return 'Transport';
-  if (/salary|payroll|deposit|savings|ادخار|راتب/.test(d)) return 'Savings';
-  if (/amazon|red tag|centrepoint|apple|google|steam|tabby|tamara|store|suppl|shop|mall|casht|noon|jarir|جوجل|شراء|متجر/.test(d)) return 'Shopping';
-  return 'Other';
-}
-function cleanDescription(text) { return String(text || '').replace(/\s+/g, ' ').replace(/Amount:.*/i, '').replace(/\*\*|ملاحظة|الوقت/g, '').trim().slice(0, 90); }
-function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
-
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY) || OLD_STORAGE_KEYS.map(k => localStorage.getItem(k)).find(Boolean);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      state = { salary: Number(parsed.salary || 0), language: parsed.language || 'en', transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [] };
-      saveState();
-    } catch { state = { salary: 0, language: 'en', transactions: [] }; }
-  }
-  $('salaryInput').value = state.salary || '';
-  $('itemDate').valueAsDate = new Date();
-}
+function loadState() { const saved = localStorage.getItem(STORAGE_KEY) || OLD_STORAGE_KEYS.map(k => localStorage.getItem(k)).find(Boolean); if (saved) { try { const parsed = JSON.parse(saved); state = { salary: Number(parsed.salary || 0), language: parsed.language || 'en', transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [] }; saveState(); } catch { state = { salary: 0, language: 'en', transactions: [] }; } } $('salaryInput').value = state.salary || ''; $('itemDate').valueAsDate = new Date(); }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function applyLanguage() {
-  const t = currentText();
-  document.documentElement.lang = t.htmlLang;
-  document.documentElement.dir = t.dir;
-  document.title = state.language === 'ar' ? 'رادار الراتب | مراقبة الميزانية' : 'Salary Radar | Budget Monitor';
-  $('languageToggle').textContent = t.toggle;
-  document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.dataset.i18n; if (t[key]) el.textContent = t[key]; });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.dataset.i18nPlaceholder; if (t[key]) el.placeholder = t[key]; });
-  $('itemCategory').innerHTML = categories.map(cat => `<option value="${cat}">${t.categories[cat]}</option>`).join('');
-}
-function getTotals() {
-  const spent = state.transactions.filter(t => t.category !== 'Savings').reduce((sum, t) => sum + Number(t.amount), 0);
-  const saved = state.transactions.filter(t => t.category === 'Savings').reduce((sum, t) => sum + Number(t.amount), 0);
-  return { spent, saved, remaining: state.salary - spent - saved };
-}
-function updateSummary() {
-  const t = currentText();
-  const { spent, saved, remaining } = getTotals();
-  const salary = Number(state.salary || 0);
-  const spentPct = salary ? Math.round((spent / salary) * 100) : 0;
-  const savingsPct = salary ? Math.round((saved / salary) * 100) : 0;
-  const daily = remaining > 0 ? remaining / daysLeftInSalaryCycle() : 0;
-  $('remainingAmount').textContent = money(remaining);
-  $('spentAmount').textContent = money(spent);
-  $('savedAmount').textContent = money(saved);
-  $('dailyBudget').textContent = money(daily);
-  $('spentPercent').textContent = `${spentPct}% ${t.ofSalary}`;
-  $('savingsPercent').textContent = `${savingsPct}% ${t.ofSalary}`;
-  let note = t.notes.healthy;
-  if (!salary) note = t.notes.noSalary; else if (remaining < 0) note = t.notes.over; else if (spentPct > 80) note = t.notes.danger; else if (spentPct > 55) note = t.notes.careful;
-  $('remainingNote').textContent = note;
-  updateMood(spentPct, savingsPct, remaining);
-}
-function updateMood(spentPct, savingsPct, remaining) {
-  const t = currentText();
-  $('meterFill').style.width = `${Math.min(100, spentPct)}%`;
-  const tips = [];
-  let mood = t.mood.calm;
-  if (!state.salary) { mood = t.mood.noSalary; tips.push(t.tips.start); }
-  else if (remaining < 0) { mood = t.mood.critical; tips.push(t.tips.freeze, t.tips.visa); }
-  else if (spentPct >= 80) { mood = t.mood.danger; tips.push(t.tips.daily, t.tips.delay); }
-  else if (spentPct >= 55) { mood = t.mood.warning; tips.push(t.tips.moveSavings, t.tips.groupSmall); }
-  else { tips.push(t.tips.good, t.tips.saveTarget); }
-  if (savingsPct < 10 && state.salary > 0) tips.push(t.tips.lowSavings);
-  $('moodText').textContent = mood;
-  $('tipsBox').innerHTML = tips.map(tip => `<div class="tip">${tip}</div>`).join('');
-}
-function categoryTotals() { const totals = {}; for (const t of state.transactions) totals[t.category] = (totals[t.category] || 0) + Number(t.amount); return totals; }
-function updateChart() {
-  const t = currentText();
-  const totals = categoryTotals(); const labels = Object.keys(totals); const data = Object.values(totals);
-  if (categoryChart) categoryChart.destroy();
-  categoryChart = new Chart($('categoryChart'), { type: 'doughnut', data: { labels: labels.map(label => t.categories[label] || label), datasets: [{ data, backgroundColor: labels.map(l => categoryColors[l] || categoryColors.Other), borderColor: 'rgba(255,255,255,.15)', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#dbeafe', padding: 16, font: { weight: '700' } } } }, cutout: '68%' } });
-}
-function renderTransactions() {
-  const t = currentText(); const list = $('transactionList');
-  if (!state.transactions.length) { list.innerHTML = `<div class="empty">${t.empty}</div>`; return; }
-  list.innerHTML = state.transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(item => `<div class="transaction"><div><b>${escapeHtml(item.name)}</b><small>${item.date || t.noDate}</small></div><span class="badge">${t.categories[item.category] || item.category} · ${money(item.amount)}</span><button class="delete-btn" data-id="${item.id}">${t.delete}</button></div>`).join('');
-  document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => { state.transactions = state.transactions.filter(t => t.id !== btn.dataset.id); saveState(); render(); }));
-}
-function addTransaction() {
-  const t = currentText(); const name = $('itemName').value.trim(); const amount = Number($('itemAmount').value); const category = $('itemCategory').value; const date = $('itemDate').value;
-  if (!name || !amount || amount <= 0) { alert(t.alertInvalid); return; }
-  state.transactions.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, amount, category, date, source: 'Manual' });
-  $('itemName').value = ''; $('itemAmount').value = ''; saveState(); render();
-}
+function clearAllBudgetStorageButKeepSettings() { const keepSalary = Number(state.salary || 0); const keepLanguage = state.language || 'en'; [STORAGE_KEY, ...OLD_STORAGE_KEYS].forEach(key => localStorage.removeItem(key)); state = { salary: keepSalary, language: keepLanguage, transactions: [] }; saveState(); }
+function resetCycleTransactions() { const t = currentText(); if (!confirm(t.confirmReset)) return; parsedImports = []; lastImportMeta = { filesRead: 0, ignored: 0, outsideCycle: 0, cycle: null }; clearAllBudgetStorageButKeepSettings(); $('importPreview').innerHTML = ''; $('importSummary').innerHTML = `<div class="import-kpi"><span>${t.resetDone}</span><strong>✓</strong></div>`; $('importParsed').disabled = true; render(); }
 
-async function analyzeFiles() {
-  const t = currentText(); const files = Array.from($('statementFiles').files || []);
-  if (!files.length) { alert(t.noFile); return; }
-  parsedImports = [];
-  renderImportStatus(t.analyzing);
-  let ignored = 0;
-  let allRows = [];
-  for (const file of files) {
-    const lower = file.name.toLowerCase();
-    try {
-      let rows = [];
-      if (lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv')) rows = await parseSpreadsheetFile(file);
-      else if (lower.endsWith('.pdf')) rows = await parsePdfFile(file);
-      rows.forEach(row => allRows.push({ ...row, source: file.name }));
-    } catch (err) { console.error(err); }
-  }
-  const cycle = detectSalaryCycle(allRows);
-  let outsideCycle = 0;
-  allRows.forEach(row => {
-    if (!isInsideCycle(row.date, cycle)) { outsideCycle += 1; return; }
-    if (row.amount > 0 && !row.isIncome && !row.isSalary) parsedImports.push(row);
-    else ignored += 1;
-  });
-  lastImportMeta = { filesRead: files.length, ignored, outsideCycle, cycle };
-  renderImportPreview(files.length, ignored, outsideCycle, cycle);
-}
-async function parseSpreadsheetFile(file) {
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
-  const out = [];
-  workbook.SheetNames.forEach(sheetName => {
-    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: '' });
-    rows.forEach((row, index) => {
-      const cells = row.map(v => String(v || '').trim());
-      const joined = cells.join(' ');
-      if (!joined || /Statement|كشف|Message|Details|Amount Due|Credit Limit|Card Details|Balance Details|Tasaheel/i.test(joined)) return;
-      const amount = parseMoney(cells[0]);
-      const merchant = cells[2] || cells[3] || joined;
-      const date = normalizeDate(cells[5] || cells[4] || joined);
-      const isSalary = /payroll|salary|راتب|وزارة الصحة/i.test(joined);
-      const isIncome = amount < 0 || /deposit|credit|دائن|حوالات|الواردة/i.test(joined);
-      if (Math.abs(amount) > 0 && merchant.length > 2 && !/Remaining Amount|Installment Amount|Transaction Amount/i.test(joined)) {
-        out.push({ name: cleanDescription(merchant), amount: Math.abs(amount), category: categorize(merchant), date, rawIndex: index, isIncome, isSalary });
-      }
-    });
-  });
-  return out;
-}
-async function parsePdfFile(file) {
-  if (!window.pdfjsLib) return [];
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-  const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-  const lines = [];
-  for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
-    const page = await pdf.getPage(pageNo);
-    const text = await page.getTextContent();
-    const grouped = {};
-    text.items.forEach(item => {
-      const y = Math.round(item.transform[5] / 4) * 4;
-      grouped[y] = grouped[y] || [];
-      grouped[y].push({ x: item.transform[4], str: item.str });
-    });
-    Object.keys(grouped).sort((a, b) => b - a).forEach(y => {
-      const line = grouped[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
-      if (line) lines.push(line);
-    });
-  }
-  return extractBankPdfRows(lines);
-}
-function extractBankPdfRows(lines) {
-  const out = [];
-  let currentDate = '';
-  for (const line of lines) {
-    const dateMatch = line.match(/20\d{2}[\/\-]\d{2}[\/\-]\d{2}/) || line.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
-    if (dateMatch) currentDate = normalizeDate(dateMatch[0]);
-    const amounts = Array.from(line.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{2})\s*SAR|SAR\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.\d{2}/g)).map(m => parseMoney(m[0]));
-    if (!amounts.length) continue;
-    const isSalary = /PAYROLL|salary|راتب|وزارة الصحة/i.test(line);
-    const isIncome = /دائن|حوالات سريع الواردة|FR\/|PAYROLL|Total Deposits|Opening|Closing/i.test(line);
-    const isDebit = /مدين|شراء|خصم|TO\/|تحويل|Withdrawal|مدفوعات|Visa|Mastercard/i.test(line);
-    const amount = Math.max(...amounts.filter(a => a > 0));
-    if (!amount || amount > 100000) continue;
-    if (!isDebit && !isIncome && !isSalary) continue;
-    const desc = cleanDescription(line.replace(/\d{1,3}(?:,\d{3})*(?:\.\d{2})\s*SAR|SAR\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})|20\d{2}[\/\-]\d{2}[\/\-]\d{2}/g, ''));
-    out.push({ name: desc || 'Bank transaction', amount, category: categorize(desc), date: currentDate || new Date().toISOString().slice(0, 10), isIncome, isSalary });
-  }
-  return out;
-}
+function applyLanguage() { const t = currentText(); document.documentElement.lang = t.htmlLang; document.documentElement.dir = t.dir; document.title = state.language === 'ar' ? 'رادار الراتب | مراقبة الميزانية' : 'Salary Radar | Budget Monitor'; $('languageToggle').textContent = t.toggle; document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.dataset.i18n; if (t[key]) el.textContent = t[key]; }); document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.dataset.i18nPlaceholder; if (t[key]) el.placeholder = t[key]; }); $('itemCategory').innerHTML = categories.map(cat => `<option value="${cat}">${t.categories[cat]}</option>`).join(''); }
+function getTotals() { const spent = state.transactions.filter(t => t.category !== 'Savings').reduce((sum, t) => sum + Number(t.amount), 0); const saved = state.transactions.filter(t => t.category === 'Savings').reduce((sum, t) => sum + Number(t.amount), 0); return { spent, saved, remaining: state.salary - spent - saved }; }
+function updateSummary() { const t = currentText(); const { spent, saved, remaining } = getTotals(); const salary = Number(state.salary || 0); const spentPct = salary ? Math.round((spent / salary) * 100) : 0; const savingsPct = salary ? Math.round((saved / salary) * 100) : 0; const daily = remaining > 0 ? remaining / daysLeftInSalaryCycle() : 0; $('remainingAmount').textContent = money(remaining); $('spentAmount').textContent = money(spent); $('savedAmount').textContent = money(saved); $('dailyBudget').textContent = money(daily); $('spentPercent').textContent = `${spentPct}% ${t.ofSalary}`; $('savingsPercent').textContent = `${savingsPct}% ${t.ofSalary}`; let note = t.notes.healthy; if (!salary) note = t.notes.noSalary; else if (remaining < 0) note = t.notes.over; else if (spentPct > 80) note = t.notes.danger; else if (spentPct > 55) note = t.notes.careful; $('remainingNote').textContent = note; updateMood(spentPct, savingsPct, remaining); }
+function updateMood(spentPct, savingsPct, remaining) { const t = currentText(); $('meterFill').style.width = `${Math.min(100, spentPct)}%`; const tips = []; let mood = t.mood.calm; if (!state.salary) { mood = t.mood.noSalary; tips.push(t.tips.start); } else if (remaining < 0) { mood = t.mood.critical; tips.push(t.tips.freeze, t.tips.visa); } else if (spentPct >= 80) { mood = t.mood.danger; tips.push(t.tips.daily, t.tips.delay); } else if (spentPct >= 55) { mood = t.mood.warning; tips.push(t.tips.moveSavings, t.tips.groupSmall); } else { tips.push(t.tips.good, t.tips.saveTarget); } if (savingsPct < 10 && state.salary > 0) tips.push(t.tips.lowSavings); $('moodText').textContent = mood; $('tipsBox').innerHTML = tips.map(tip => `<div class="tip">${tip}</div>`).join(''); }
+function categoryTotals() { const totals = {}; for (const t of state.transactions) totals[t.category] = (totals[t.category] || 0) + Number(t.amount); return totals; }
+function updateChart() { const t = currentText(); const totals = categoryTotals(); const labels = Object.keys(totals); const data = Object.values(totals); if (categoryChart) categoryChart.destroy(); categoryChart = new Chart($('categoryChart'), { type: 'doughnut', data: { labels: labels.map(label => t.categories[label] || label), datasets: [{ data, backgroundColor: labels.map(l => categoryColors[l] || categoryColors.Other), borderColor: 'rgba(255,255,255,.15)', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#dbeafe', padding: 16, font: { weight: '700' } } } }, cutout: '68%' } }); }
+function renderTransactions() { const t = currentText(); const list = $('transactionList'); if (!state.transactions.length) { list.innerHTML = `<div class="empty">${t.empty}</div>`; return; } list.innerHTML = state.transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(item => `<div class="transaction"><div><b>${escapeHtml(item.name)}</b><small>${item.date || t.noDate}</small></div><span class="badge">${t.categories[item.category] || item.category} · ${money(item.amount)}</span><button class="delete-btn" data-id="${item.id}">${t.delete}</button></div>`).join(''); document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => { state.transactions = state.transactions.filter(t => t.id !== btn.dataset.id); saveState(); render(); })); }
+function addTransaction() { const t = currentText(); const name = $('itemName').value.trim(); const amount = Number($('itemAmount').value); const category = $('itemCategory').value; const date = $('itemDate').value; if (!name || !amount || amount <= 0) { alert(t.alertInvalid); return; } state.transactions.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, amount, category, date, source: 'Manual' }); $('itemName').value = ''; $('itemAmount').value = ''; saveState(); render(); }
+
+async function analyzeFiles() { const t = currentText(); const files = Array.from($('statementFiles').files || []); if (!files.length) { alert(t.noFile); return; } parsedImports = []; renderImportStatus(t.analyzing); let ignored = 0; let allRows = []; for (const file of files) { const lower = file.name.toLowerCase(); try { let rows = []; if (lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv')) rows = await parseSpreadsheetFile(file); else if (lower.endsWith('.pdf')) rows = await parsePdfFile(file); rows.forEach(row => allRows.push({ ...row, source: file.name })); } catch (err) { console.error(err); } } const cycle = detectSalaryCycle(allRows); let outsideCycle = 0; allRows.forEach(row => { if (!isInsideCycle(row.date, cycle)) { outsideCycle += 1; return; } if (row.amount > 0 && !row.isIncome && !row.isSalary) parsedImports.push(row); else ignored += 1; }); lastImportMeta = { filesRead: files.length, ignored, outsideCycle, cycle }; renderImportPreview(files.length, ignored, outsideCycle, cycle); }
+async function parseSpreadsheetFile(file) { const buffer = await file.arrayBuffer(); const workbook = XLSX.read(buffer, { type: 'array', cellDates: false }); const out = []; workbook.SheetNames.forEach(sheetName => { const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: '' }); rows.forEach((row, index) => { const cells = row.map(v => String(v || '').trim()); const joined = cells.join(' '); if (!joined || /Statement|كشف|Message|Details|Amount Due|Credit Limit|Card Details|Balance Details|Tasaheel/i.test(joined)) return; const amount = parseMoney(cells[0]); const merchant = cells[2] || cells[3] || joined; const date = normalizeDate(cells[5] || cells[4] || joined); const isSalary = /payroll|salary|راتب|وزارة الصحة/i.test(joined); const isIncome = amount < 0 || /deposit|credit|دائن|حوالات|الواردة/i.test(joined); if (Math.abs(amount) > 0 && merchant.length > 2 && !/Remaining Amount|Installment Amount|Transaction Amount/i.test(joined)) out.push({ name: cleanDescription(merchant), amount: Math.abs(amount), category: categorize(merchant), date, rawIndex: index, isIncome, isSalary }); }); }); return out; }
+async function parsePdfFile(file) { if (!window.pdfjsLib) return []; pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; const buffer = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({ data: buffer }).promise; const lines = []; for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) { const page = await pdf.getPage(pageNo); const text = await page.getTextContent(); const grouped = {}; text.items.forEach(item => { const y = Math.round(item.transform[5] / 4) * 4; grouped[y] = grouped[y] || []; grouped[y].push({ x: item.transform[4], str: item.str }); }); Object.keys(grouped).sort((a, b) => b - a).forEach(y => { const line = grouped[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' ').replace(/\s+/g, ' ').trim(); if (line) lines.push(line); }); } return extractBankPdfRows(lines); }
+function extractBankPdfRows(lines) { const out = []; let currentDate = ''; for (const line of lines) { const dateMatch = line.match(/20\d{2}[\/\-]\d{2}[\/\-]\d{2}/) || line.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/); if (dateMatch) currentDate = normalizeDate(dateMatch[0]); const amounts = Array.from(line.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{2})\s*SAR|SAR\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.\d{2}/g)).map(m => parseMoney(m[0])); if (!amounts.length) continue; const isSalary = /PAYROLL|salary|راتب|وزارة الصحة/i.test(line); const isIncome = /دائن|حوالات سريع الواردة|FR\/|PAYROLL|Total Deposits|Opening|Closing/i.test(line); const isDebit = /مدين|شراء|خصم|TO\/|تحويل|Withdrawal|مدفوعات|Visa|Mastercard/i.test(line); const amount = Math.max(...amounts.filter(a => a > 0)); if (!amount || amount > 100000) continue; if (!isDebit && !isIncome && !isSalary) continue; const desc = cleanDescription(line.replace(/\d{1,3}(?:,\d{3})*(?:\.\d{2})\s*SAR|SAR\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})|20\d{2}[\/\-]\d{2}[\/\-]\d{2}/g, '')); out.push({ name: desc || 'Bank transaction', amount, category: categorize(desc), date: currentDate || new Date().toISOString().slice(0, 10), isIncome, isSalary }); } return out; }
 function renderImportStatus(message) { $('importSummary').innerHTML = `<div class="import-kpi"><span>${escapeHtml(message)}</span><strong>...</strong></div>`; $('importPreview').innerHTML = ''; $('importParsed').disabled = true; }
-function renderImportPreview(filesRead = lastImportMeta.filesRead, ignored = lastImportMeta.ignored, outsideCycle = lastImportMeta.outsideCycle, cycle = lastImportMeta.cycle) {
-  const t = currentText(); const total = parsedImports.reduce((s, x) => s + Number(x.amount), 0);
-  $('importSummary').innerHTML = `<div class="import-kpi"><span>${t.salaryCycle}</span><strong>${formatCycle(cycle)}</strong></div><div class="import-kpi"><span>${t.detected}</span><strong>${parsedImports.length}</strong></div><div class="import-kpi"><span>${t.detectedTotal}</span><strong>${money(total)}</strong></div><div class="import-kpi"><span>${t.outsideCycle}</span><strong>${outsideCycle}</strong></div><div class="import-kpi"><span>${t.ignoredCredits}</span><strong>${ignored}</strong></div><div class="import-kpi"><span>${t.filesRead}</span><strong>${filesRead}</strong></div>`;
-  if (!parsedImports.length) { $('importPreview').innerHTML = `<div class="empty">${t.noDetected}</div>`; $('importParsed').disabled = true; return; }
-  $('importParsed').disabled = false;
-  $('importPreview').innerHTML = `<div class="empty">${t.previewLimit}</div>` + parsedImports.slice(0, 40).map((item, idx) => `<div class="preview-row"><div><b>${escapeHtml(item.name)}</b><small>${item.date || t.noDate}</small><div class="source">${t.importedFrom}: ${escapeHtml(item.source || '')}</div></div><span class="amount">${money(item.amount)}</span><select data-preview-category="${idx}">${categories.map(cat => `<option value="${cat}" ${cat === item.category ? 'selected' : ''}>${t.categories[cat]}</option>`).join('')}</select><small>${t.categories[item.category] || item.category}</small><button class="delete-btn" data-preview-delete="${idx}">${t.delete}</button></div>`).join('');
-  document.querySelectorAll('[data-preview-category]').forEach(sel => sel.addEventListener('change', () => { parsedImports[Number(sel.dataset.previewCategory)].category = sel.value; renderImportPreview(filesRead, ignored, outsideCycle, cycle); }));
-  document.querySelectorAll('[data-preview-delete]').forEach(btn => btn.addEventListener('click', () => { parsedImports.splice(Number(btn.dataset.previewDelete), 1); renderImportPreview(filesRead, ignored, outsideCycle, cycle); }));
-}
-function importParsedTransactions() {
-  const t = currentText();
-  const now = Date.now();
-  parsedImports.forEach((item, i) => state.transactions.push({ id: `${now}-${i}`, name: item.name, amount: Math.abs(Number(item.amount)), category: item.category, date: item.date, source: item.source }));
-  parsedImports = [];
-  saveState(); render();
-  $('importSummary').innerHTML = `<div class="import-kpi"><span>${t.importedOk}</span><strong>✓</strong></div>`;
-  $('importPreview').innerHTML = '';
-  $('importParsed').disabled = true;
-}
+function renderImportPreview(filesRead = lastImportMeta.filesRead, ignored = lastImportMeta.ignored, outsideCycle = lastImportMeta.outsideCycle, cycle = lastImportMeta.cycle) { const t = currentText(); const total = parsedImports.reduce((s, x) => s + Number(x.amount), 0); $('importSummary').innerHTML = `<div class="import-kpi"><span>${t.salaryCycle}</span><strong>${formatCycle(cycle)}</strong></div><div class="import-kpi"><span>${t.detected}</span><strong>${parsedImports.length}</strong></div><div class="import-kpi"><span>${t.detectedTotal}</span><strong>${money(total)}</strong></div><div class="import-kpi"><span>${t.outsideCycle}</span><strong>${outsideCycle}</strong></div><div class="import-kpi"><span>${t.ignoredCredits}</span><strong>${ignored}</strong></div><div class="import-kpi"><span>${t.filesRead}</span><strong>${filesRead}</strong></div>`; if (!parsedImports.length) { $('importPreview').innerHTML = `<div class="empty">${t.noDetected}</div>`; $('importParsed').disabled = true; return; } $('importParsed').disabled = false; $('importPreview').innerHTML = `<div class="empty">${t.previewLimit}</div>` + parsedImports.slice(0, 40).map((item, idx) => `<div class="preview-row"><div><b>${escapeHtml(item.name)}</b><small>${item.date || t.noDate}</small><div class="source">${t.importedFrom}: ${escapeHtml(item.source || '')}</div></div><span class="amount">${money(item.amount)}</span><select data-preview-category="${idx}">${categories.map(cat => `<option value="${cat}" ${cat === item.category ? 'selected' : ''}>${t.categories[cat]}</option>`).join('')}</select><small>${t.categories[item.category] || item.category}</small><button class="delete-btn" data-preview-delete="${idx}">${t.delete}</button></div>`).join(''); document.querySelectorAll('[data-preview-category]').forEach(sel => sel.addEventListener('change', () => { parsedImports[Number(sel.dataset.previewCategory)].category = sel.value; renderImportPreview(filesRead, ignored, outsideCycle, cycle); })); document.querySelectorAll('[data-preview-delete]').forEach(btn => btn.addEventListener('click', () => { parsedImports.splice(Number(btn.dataset.previewDelete), 1); renderImportPreview(filesRead, ignored, outsideCycle, cycle); })); }
+function importParsedTransactions() { const t = currentText(); const now = Date.now(); parsedImports.forEach((item, i) => state.transactions.push({ id: `${now}-${i}`, name: item.name, amount: Math.abs(Number(item.amount)), category: item.category, date: item.date, source: item.source })); parsedImports = []; saveState(); render(); $('importSummary').innerHTML = `<div class="import-kpi"><span>${t.importedOk}</span><strong>✓</strong></div>`; $('importPreview').innerHTML = ''; $('importParsed').disabled = true; }
 function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `salary-radar-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); }
 function render() { applyLanguage(); updateSummary(); updateChart(); renderTransactions(); if (parsedImports.length) renderImportPreview(); }
 
@@ -324,7 +89,7 @@ $('addTransaction').addEventListener('click', addTransaction);
 $('exportData').addEventListener('click', exportData);
 $('analyzeFiles').addEventListener('click', analyzeFiles);
 $('importParsed').addEventListener('click', importParsedTransactions);
-$('resetMonth').addEventListener('click', () => { const t = currentText(); if (confirm(t.confirmReset)) { state.transactions = []; saveState(); render(); } });
+$('resetMonth').addEventListener('click', resetCycleTransactions);
 
 loadState();
 render();
