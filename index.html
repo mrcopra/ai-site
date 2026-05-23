@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Salary Radar | Budget Monitor</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">Personal Budget Monitor</p>
+        <h1>Salary Radar</h1>
+        <p class="subtitle">Track bills, shopping, visa card spending, savings, and the mysterious money leaks that keep humanity humble.</p>
+      </div>
+      <div class="salary-box">
+        <label for="salaryInput">Monthly salary</label>
+        <div class="money-input"><span>SAR</span><input id="salaryInput" type="number" min="0" placeholder="0" /></div>
+        <button id="saveSalary">Save salary</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="stat-card safe"><span>Remaining</span><strong id="remainingAmount">SAR 0</strong><small id="remainingNote">Set salary to begin</small></article>
+      <article class="stat-card danger"><span>Spent</span><strong id="spentAmount">SAR 0</strong><small id="spentPercent">0% of salary</small></article>
+      <article class="stat-card calm"><span>Saved</span><strong id="savedAmount">SAR 0</strong><small id="savingsPercent">0% of salary</small></article>
+      <article class="stat-card warning"><span>Daily safe spend</span><strong id="dailyBudget">SAR 0</strong><small>For the rest of this month</small></article>
+    </section>
+
+    <section class="dashboard-grid">
+      <article class="panel add-panel">
+        <h2>Add transaction</h2>
+        <div class="form-grid">
+          <input id="itemName" placeholder="Name, e.g. Electricity bill" />
+          <input id="itemAmount" type="number" min="0" placeholder="Amount" />
+          <select id="itemCategory">
+            <option>Bills</option>
+            <option>Shopping</option>
+            <option>Visa Card</option>
+            <option>Food</option>
+            <option>Transport</option>
+            <option>Savings</option>
+            <option>Other</option>
+          </select>
+          <input id="itemDate" type="date" />
+        </div>
+        <button id="addTransaction" class="primary">Add</button>
+        <button id="resetMonth" class="ghost">Reset month</button>
+      </article>
+
+      <article class="panel chart-panel">
+        <h2>Where your salary went</h2>
+        <canvas id="categoryChart"></canvas>
+      </article>
+
+      <article class="panel mood-panel">
+        <h2>Money mood</h2>
+        <div class="meter"><div id="meterFill"></div></div>
+        <p id="moodText">Waiting for data. Suspense, but financial.</p>
+        <div class="tips" id="tipsBox"></div>
+      </article>
+
+      <article class="panel list-panel">
+        <div class="list-head"><h2>Transactions</h2><button id="exportData">Export JSON</button></div>
+        <div id="transactionList" class="transaction-list"></div>
+      </article>
+    </section>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
