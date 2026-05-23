@@ -1,7 +1,8 @@
-const STORAGE_KEY = 'salary-radar-v2';
-const OLD_STORAGE_KEY = 'salary-radar-v1';
+const STORAGE_KEY = 'salary-radar-v3';
+const OLD_STORAGE_KEYS = ['salary-radar-v2', 'salary-radar-v1'];
 
 const categories = ['Bills', 'Shopping', 'Visa Card', 'Food', 'Transport', 'Savings', 'Other'];
+let parsedImports = [];
 
 const translations = {
   en: {
@@ -19,6 +20,11 @@ const translations = {
     saved: 'Saved',
     dailySafeSpend: 'Daily safe spend',
     dailyNote: 'For the rest of this month',
+    importEyebrow: 'Smart file import',
+    importTitle: 'Analyze bank / Visa files',
+    importSubtitle: 'Upload Excel, CSV, or PDF statements. The analysis happens inside your browser before you import anything.',
+    analyzeFiles: 'Analyze files',
+    importParsed: 'Import detected expenses',
     addTransactionTitle: 'Add transaction',
     itemNamePlaceholder: 'Name, e.g. Electricity bill',
     amountPlaceholder: 'Amount',
@@ -32,6 +38,16 @@ const translations = {
     noDate: 'No date',
     delete: 'Delete',
     empty: 'No transactions yet. Suspiciously peaceful.',
+    noFile: 'Choose at least one file first.',
+    analyzing: 'Analyzing files locally...',
+    detected: 'Detected expenses',
+    detectedTotal: 'Detected total',
+    ignoredCredits: 'Ignored credits/income',
+    filesRead: 'Files read',
+    noDetected: 'No expenses detected. Either the file format is unusual, or the bank invented a new way to annoy everyone.',
+    importedOk: 'Imported expenses successfully.',
+    importedFrom: 'Imported from',
+    previewLimit: 'Showing first 40 detected expenses.',
     alertInvalid: 'Add a name and valid amount. The budget goblin demands basic effort.',
     confirmReset: 'Reset all transactions for this month? Salary will stay saved.',
     notes: {
@@ -60,15 +76,7 @@ const translations = {
       saveTarget: 'Try saving at least 10–20% before shopping starts whispering.',
       lowSavings: 'Savings are under 10%. Future-you is already filing a complaint.'
     },
-    categories: {
-      Bills: 'Bills',
-      Shopping: 'Shopping',
-      'Visa Card': 'Visa Card',
-      Food: 'Food',
-      Transport: 'Transport',
-      Savings: 'Savings',
-      Other: 'Other'
-    }
+    categories: { Bills: 'Bills', Shopping: 'Shopping', 'Visa Card': 'Visa Card', Food: 'Food', Transport: 'Transport', Savings: 'Savings', Other: 'Other' }
   },
   ar: {
     htmlLang: 'ar',
@@ -85,6 +93,11 @@ const translations = {
     saved: 'المدخر',
     dailySafeSpend: 'الصرف اليومي الآمن',
     dailyNote: 'لباقي أيام الشهر',
+    importEyebrow: 'استيراد ذكي',
+    importTitle: 'تحليل ملفات البنك / الفيزا',
+    importSubtitle: 'ارفع ملفات Excel أو CSV أو PDF. التحليل يتم داخل المتصفح قبل استيراد أي عملية.',
+    analyzeFiles: 'تحليل الملفات',
+    importParsed: 'استيراد المصروفات المكتشفة',
     addTransactionTitle: 'إضافة عملية',
     itemNamePlaceholder: 'الاسم، مثال: فاتورة الكهرباء',
     amountPlaceholder: 'المبلغ',
@@ -98,6 +111,16 @@ const translations = {
     noDate: 'بدون تاريخ',
     delete: 'حذف',
     empty: 'لا توجد عمليات بعد. هدوء مالي مثير للشك.',
+    noFile: 'اختر ملفًا واحدًا على الأقل أولًا.',
+    analyzing: 'جاري تحليل الملفات محليًا...',
+    detected: 'المصروفات المكتشفة',
+    detectedTotal: 'إجمالي المكتشف',
+    ignoredCredits: 'الدخل/المدفوعات المتجاهلة',
+    filesRead: 'الملفات المقروءة',
+    noDetected: 'لم يتم اكتشاف مصروفات. إما أن صيغة الملف غريبة، أو أن البنك اخترع طريقة جديدة لتعذيب البشر.',
+    importedOk: 'تم استيراد المصروفات بنجاح.',
+    importedFrom: 'مستورد من',
+    previewLimit: 'يتم عرض أول 40 مصروفًا مكتشفًا.',
     alertInvalid: 'أدخل اسمًا ومبلغًا صحيحًا. حتى وحش الميزانية يحتاج معلومات بسيطة.',
     confirmReset: 'هل تريد تصفير عمليات هذا الشهر؟ سيتم الاحتفاظ بالراتب.',
     notes: {
@@ -126,23 +149,11 @@ const translations = {
       saveTarget: 'حاول ادخار 10–20% قبل أن يبدأ التسوق بالوسوسة.',
       lowSavings: 'الادخار أقل من 10%. نسختك المستقبلية تقدّم شكوى رسمية.'
     },
-    categories: {
-      Bills: 'فواتير',
-      Shopping: 'تسوق',
-      'Visa Card': 'بطاقة فيزا',
-      Food: 'طعام',
-      Transport: 'مواصلات',
-      Savings: 'ادخار',
-      Other: 'أخرى'
-    }
+    categories: { Bills: 'فواتير', Shopping: 'تسوق', 'Visa Card': 'بطاقة فيزا', Food: 'طعام', Transport: 'مواصلات', Savings: 'ادخار', Other: 'أخرى' }
   }
 };
 
-let state = {
-  salary: 0,
-  language: 'en',
-  transactions: []
-};
+let state = { salary: 0, language: 'en', transactions: [] };
 
 const $ = (id) => document.getElementById(id);
 const currentText = () => translations[state.language || 'en'];
@@ -151,41 +162,53 @@ const money = (value) => {
   const locale = state.language === 'ar' ? 'ar-SA' : undefined;
   return `${t.currency} ${Number(value || 0).toLocaleString(locale, { maximumFractionDigits: 2 })}`;
 };
-
-const categoryColors = {
-  Bills: '#60a5fa',
-  Shopping: '#a78bfa',
-  'Visa Card': '#fb7185',
-  Food: '#facc15',
-  Transport: '#22d3ee',
-  Savings: '#4ade80',
-  Other: '#94a3b8'
+const parseMoney = (value) => {
+  if (value === null || value === undefined) return 0;
+  const text = String(value).replace(/SAR|ر\.س/g, '').replace(/,/g, '').trim();
+  const isCredit = /\bCR\b|credit|payment received|advance payment|حوالات|الواردة|دائن/i.test(String(value));
+  const match = text.match(/-?\d+(\.\d+)?/);
+  if (!match) return 0;
+  const amount = Number(match[0]);
+  return isCredit ? -Math.abs(amount) : amount;
+};
+const normalizeDate = (value) => {
+  if (!value) return new Date().toISOString().slice(0, 10);
+  const text = String(value).trim();
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(text)) return text.replaceAll('/', '-');
+  const m = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (!m) return new Date().toISOString().slice(0, 10);
+  let [_, d, mo, y] = m;
+  if (y.length === 2) y = `20${y}`;
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
 };
 
+const categoryColors = { Bills: '#60a5fa', Shopping: '#a78bfa', 'Visa Card': '#fb7185', Food: '#facc15', Transport: '#22d3ee', Savings: '#4ade80', Other: '#94a3b8' };
 let categoryChart;
 
+function categorize(description) {
+  const d = String(description || '').toLowerCase();
+  if (/visa|mastercard|card ending|بطاق|advance payment|murabaha|sadad|stc|electric|water|bill|fee|installment|قسط|رسوم/.test(d)) return 'Bills';
+  if (/hunger|keeta|toyou|restaurant|coffee|starbucks|barns|panda|grocery|tamwinat|tmwynat|تموين|بقال|food|مطعم|سوبر|market|aswag/.test(d)) return 'Food';
+  if (/pharmacy|medical|nahdi|lab|delta|صيد|مختبر|medical|مستشفى/.test(d)) return 'Bills';
+  if (/petrol|fuel|gas|uber|careem|transport|محطة|بنزين/.test(d)) return 'Transport';
+  if (/salary|payroll|deposit|savings|ادخار/.test(d)) return 'Savings';
+  if (/amazon|red tag|centrepoint|apple|google|steam|tabby|tamara|store|suppl|shop|mall|casht|noon|jarir|جوجل|شراء|متجر/.test(d)) return 'Shopping';
+  return 'Other';
+}
+
 function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY);
+  const saved = localStorage.getItem(STORAGE_KEY) || OLD_STORAGE_KEYS.map(k => localStorage.getItem(k)).find(Boolean);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      state = {
-        salary: Number(parsed.salary || 0),
-        language: parsed.language || 'en',
-        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : []
-      };
+      state = { salary: Number(parsed.salary || 0), language: parsed.language || 'en', transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [] };
       saveState();
-    } catch {
-      state = { salary: 0, language: 'en', transactions: [] };
-    }
+    } catch { state = { salary: 0, language: 'en', transactions: [] }; }
   }
   $('salaryInput').value = state.salary || '';
   $('itemDate').valueAsDate = new Date();
 }
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
 function applyLanguage() {
   const t = currentText();
@@ -193,38 +216,17 @@ function applyLanguage() {
   document.documentElement.dir = t.dir;
   document.title = state.language === 'ar' ? 'رادار الراتب | مراقبة الميزانية' : 'Salary Radar | Budget Monitor';
   $('languageToggle').textContent = t.toggle;
-
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.dataset.i18n;
-    if (t[key]) el.textContent = t[key];
-  });
-
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.dataset.i18nPlaceholder;
-    if (t[key]) el.placeholder = t[key];
-  });
-
-  $('itemCategory').innerHTML = categories
-    .map(cat => `<option value="${cat}">${t.categories[cat]}</option>`)
-    .join('');
+  document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.dataset.i18n; if (t[key]) el.textContent = t[key]; });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.dataset.i18nPlaceholder; if (t[key]) el.placeholder = t[key]; });
+  $('itemCategory').innerHTML = categories.map(cat => `<option value="${cat}">${t.categories[cat]}</option>`).join('');
 }
 
 function getTotals() {
-  const spent = state.transactions
-    .filter(t => t.category !== 'Savings')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-  const saved = state.transactions
-    .filter(t => t.category === 'Savings')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-  const remaining = state.salary - spent - saved;
-  return { spent, saved, remaining };
+  const spent = state.transactions.filter(t => t.category !== 'Savings').reduce((sum, t) => sum + Number(t.amount), 0);
+  const saved = state.transactions.filter(t => t.category === 'Savings').reduce((sum, t) => sum + Number(t.amount), 0);
+  return { spent, saved, remaining: state.salary - spent - saved };
 }
-
-function daysLeftInMonth() {
-  const now = new Date();
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return Math.max(1, end.getDate() - now.getDate() + 1);
-}
+function daysLeftInMonth() { const now = new Date(); const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); return Math.max(1, end.getDate() - now.getDate() + 1); }
 
 function updateSummary() {
   const t = currentText();
@@ -233,200 +235,186 @@ function updateSummary() {
   const spentPct = salary ? Math.round((spent / salary) * 100) : 0;
   const savingsPct = salary ? Math.round((saved / salary) * 100) : 0;
   const daily = remaining > 0 ? remaining / daysLeftInMonth() : 0;
-
   $('remainingAmount').textContent = money(remaining);
   $('spentAmount').textContent = money(spent);
   $('savedAmount').textContent = money(saved);
   $('dailyBudget').textContent = money(daily);
   $('spentPercent').textContent = `${spentPct}% ${t.ofSalary}`;
   $('savingsPercent').textContent = `${savingsPct}% ${t.ofSalary}`;
-
   let note = t.notes.healthy;
-  if (!salary) note = t.notes.noSalary;
-  else if (remaining < 0) note = t.notes.over;
-  else if (spentPct > 80) note = t.notes.danger;
-  else if (spentPct > 55) note = t.notes.careful;
+  if (!salary) note = t.notes.noSalary; else if (remaining < 0) note = t.notes.over; else if (spentPct > 80) note = t.notes.danger; else if (spentPct > 55) note = t.notes.careful;
   $('remainingNote').textContent = note;
-
   updateMood(spentPct, savingsPct, remaining);
 }
 
 function updateMood(spentPct, savingsPct, remaining) {
   const t = currentText();
-  const meter = Math.min(100, spentPct);
-  $('meterFill').style.width = `${meter}%`;
-
+  $('meterFill').style.width = `${Math.min(100, spentPct)}%`;
   const tips = [];
   let mood = t.mood.calm;
-
-  if (!state.salary) {
-    mood = t.mood.noSalary;
-    tips.push(t.tips.start);
-  } else if (remaining < 0) {
-    mood = t.mood.critical;
-    tips.push(t.tips.freeze);
-    tips.push(t.tips.visa);
-  } else if (spentPct >= 80) {
-    mood = t.mood.danger;
-    tips.push(t.tips.daily);
-    tips.push(t.tips.delay);
-  } else if (spentPct >= 55) {
-    mood = t.mood.warning;
-    tips.push(t.tips.moveSavings);
-    tips.push(t.tips.groupSmall);
-  } else {
-    tips.push(t.tips.good);
-    tips.push(t.tips.saveTarget);
-  }
-
+  if (!state.salary) { mood = t.mood.noSalary; tips.push(t.tips.start); }
+  else if (remaining < 0) { mood = t.mood.critical; tips.push(t.tips.freeze, t.tips.visa); }
+  else if (spentPct >= 80) { mood = t.mood.danger; tips.push(t.tips.daily, t.tips.delay); }
+  else if (spentPct >= 55) { mood = t.mood.warning; tips.push(t.tips.moveSavings, t.tips.groupSmall); }
+  else { tips.push(t.tips.good, t.tips.saveTarget); }
   if (savingsPct < 10 && state.salary > 0) tips.push(t.tips.lowSavings);
-
   $('moodText').textContent = mood;
   $('tipsBox').innerHTML = tips.map(tip => `<div class="tip">${tip}</div>`).join('');
 }
 
-function categoryTotals() {
-  const totals = {};
-  for (const t of state.transactions) {
-    totals[t.category] = (totals[t.category] || 0) + Number(t.amount);
-  }
-  return totals;
-}
-
+function categoryTotals() { const totals = {}; for (const t of state.transactions) totals[t.category] = (totals[t.category] || 0) + Number(t.amount); return totals; }
 function updateChart() {
   const t = currentText();
-  const totals = categoryTotals();
-  const labels = Object.keys(totals);
-  const data = Object.values(totals);
-
+  const totals = categoryTotals(); const labels = Object.keys(totals); const data = Object.values(totals);
   if (categoryChart) categoryChart.destroy();
-  const ctx = $('categoryChart');
-  categoryChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels.map(label => t.categories[label] || label),
-      datasets: [{
-        data,
-        backgroundColor: labels.map(l => categoryColors[l] || categoryColors.Other),
-        borderColor: 'rgba(255,255,255,.15)',
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#dbeafe', padding: 16, font: { weight: '700' } }
-        }
-      },
-      cutout: '68%'
-    }
-  });
+  categoryChart = new Chart($('categoryChart'), { type: 'doughnut', data: { labels: labels.map(label => t.categories[label] || label), datasets: [{ data, backgroundColor: labels.map(l => categoryColors[l] || categoryColors.Other), borderColor: 'rgba(255,255,255,.15)', borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#dbeafe', padding: 16, font: { weight: '700' } } } }, cutout: '68%' } });
 }
 
 function renderTransactions() {
-  const t = currentText();
-  const list = $('transactionList');
-  if (!state.transactions.length) {
-    list.innerHTML = `<div class="empty">${t.empty}</div>`;
-    return;
-  }
-
-  list.innerHTML = state.transactions
-    .slice()
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .map(item => `
-      <div class="transaction">
-        <div>
-          <b>${escapeHtml(item.name)}</b>
-          <small>${item.date || t.noDate}</small>
-        </div>
-        <span class="badge">${t.categories[item.category] || item.category} · ${money(item.amount)}</span>
-        <button class="delete-btn" data-id="${item.id}">${t.delete}</button>
-      </div>
-    `).join('');
-
-  document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.transactions = state.transactions.filter(t => t.id !== btn.dataset.id);
-      saveState();
-      render();
-    });
-  });
+  const t = currentText(); const list = $('transactionList');
+  if (!state.transactions.length) { list.innerHTML = `<div class="empty">${t.empty}</div>`; return; }
+  list.innerHTML = state.transactions.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(item => `
+      <div class="transaction"><div><b>${escapeHtml(item.name)}</b><small>${item.date || t.noDate}</small></div><span class="badge">${t.categories[item.category] || item.category} · ${money(item.amount)}</span><button class="delete-btn" data-id="${item.id}">${t.delete}</button></div>`).join('');
+  document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => { state.transactions = state.transactions.filter(t => t.id !== btn.dataset.id); saveState(); render(); }));
 }
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
 function addTransaction() {
-  const t = currentText();
-  const name = $('itemName').value.trim();
-  const amount = Number($('itemAmount').value);
-  const category = $('itemCategory').value;
-  const date = $('itemDate').value;
+  const t = currentText(); const name = $('itemName').value.trim(); const amount = Number($('itemAmount').value); const category = $('itemCategory').value; const date = $('itemDate').value;
+  if (!name || !amount || amount <= 0) { alert(t.alertInvalid); return; }
+  state.transactions.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name, amount, category, date, source: 'Manual' });
+  $('itemName').value = ''; $('itemAmount').value = ''; saveState(); render();
+}
 
-  if (!name || !amount || amount <= 0) {
-    alert(t.alertInvalid);
-    return;
+async function analyzeFiles() {
+  const t = currentText(); const files = Array.from($('statementFiles').files || []);
+  if (!files.length) { alert(t.noFile); return; }
+  parsedImports = [];
+  renderImportStatus(t.analyzing);
+  let ignored = 0;
+  for (const file of files) {
+    const lower = file.name.toLowerCase();
+    try {
+      let rows = [];
+      if (lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv')) rows = await parseSpreadsheetFile(file);
+      else if (lower.endsWith('.pdf')) rows = await parsePdfFile(file);
+      rows.forEach(row => {
+        if (row.amount > 0) parsedImports.push({ ...row, source: file.name });
+        else ignored += 1;
+      });
+    } catch (err) { console.error(err); }
   }
+  renderImportPreview(files.length, ignored);
+}
 
-  state.transactions.push({
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    name,
-    amount,
-    category,
-    date
+async function parseSpreadsheetFile(file) {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
+  const out = [];
+  workbook.SheetNames.forEach(sheetName => {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: '' });
+    rows.forEach((row, index) => {
+      const cells = row.map(v => String(v || '').trim());
+      const joined = cells.join(' ');
+      if (!joined || /Statement|كشف|Message|Details|Amount Due|Credit Limit|Card Details|Balance Details|Tasaheel/i.test(joined)) return;
+      const amount = parseMoney(cells[0]);
+      const merchant = cells[2] || cells[3] || joined;
+      const date = normalizeDate(cells[5] || cells[4] || joined);
+      if (Math.abs(amount) > 0 && merchant.length > 2 && !/Remaining Amount|Installment Amount|Transaction Amount/i.test(joined)) {
+        out.push({ name: cleanDescription(merchant), amount, category: categorize(merchant), date, rawIndex: index });
+      }
+    });
   });
-
-  $('itemName').value = '';
-  $('itemAmount').value = '';
-  saveState();
-  render();
+  return out;
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `salary-radar-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+async function parsePdfFile(file) {
+  if (!window.pdfjsLib) return [];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const lines = [];
+  for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+    const page = await pdf.getPage(pageNo);
+    const text = await page.getTextContent();
+    const grouped = {};
+    text.items.forEach(item => {
+      const y = Math.round(item.transform[5] / 4) * 4;
+      grouped[y] = grouped[y] || [];
+      grouped[y].push({ x: item.transform[4], str: item.str });
+    });
+    Object.keys(grouped).sort((a, b) => b - a).forEach(y => {
+      const line = grouped[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+      if (line) lines.push(line);
+    });
+  }
+  return extractBankPdfRows(lines);
 }
 
-function render() {
-  applyLanguage();
-  updateSummary();
-  updateChart();
-  renderTransactions();
+function extractBankPdfRows(lines) {
+  const out = [];
+  let currentDate = '';
+  for (const line of lines) {
+    const dateMatch = line.match(/20\d{2}[\/\-]\d{2}[\/\-]\d{2}/) || line.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/);
+    if (dateMatch) currentDate = normalizeDate(dateMatch[0]);
+    const amounts = Array.from(line.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{2})\s*SAR|SAR\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.\d{2}/g)).map(m => parseMoney(m[0]));
+    if (!amounts.length) continue;
+    const isCredit = /دائن|حوالات سريع الواردة|FR\/|PAYROLL|Total Deposits|Opening|Closing/i.test(line);
+    const isDebit = /مدين|شراء|خصم|TO\/|تحويل|Withdrawal|مدفوعات|Visa|Mastercard/i.test(line);
+    if (!isDebit || isCredit) continue;
+    const amount = Math.max(...amounts.filter(a => a > 0));
+    if (!amount || amount > 100000) continue;
+    const desc = cleanDescription(line.replace(/\d{1,3}(?:,\d{3})*(?:\.\d{2})\s*SAR|SAR\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})|20\d{2}[\/\-]\d{2}[\/\-]\d{2}/g, ''));
+    out.push({ name: desc || 'Bank transaction', amount, category: categorize(desc), date: currentDate || new Date().toISOString().slice(0, 10) });
+  }
+  return out;
 }
 
-$('languageToggle').addEventListener('click', () => {
-  state.language = state.language === 'ar' ? 'en' : 'ar';
-  saveState();
-  render();
-});
+function cleanDescription(text) { return String(text || '').replace(/\s+/g, ' ').replace(/Amount:.*/i, '').replace(/\*\*|ملاحظة|الوقت/g, '').trim().slice(0, 90); }
 
-$('saveSalary').addEventListener('click', () => {
-  state.salary = Number($('salaryInput').value || 0);
-  saveState();
-  render();
-});
+function renderImportStatus(message) { $('importSummary').innerHTML = `<div class="import-kpi"><span>${escapeHtml(message)}</span><strong>...</strong></div>`; $('importPreview').innerHTML = ''; $('importParsed').disabled = true; }
+function renderImportPreview(filesRead, ignored) {
+  const t = currentText(); const total = parsedImports.reduce((s, x) => s + Number(x.amount), 0);
+  $('importSummary').innerHTML = `
+    <div class="import-kpi"><span>${t.filesRead}</span><strong>${filesRead}</strong></div>
+    <div class="import-kpi"><span>${t.detected}</span><strong>${parsedImports.length}</strong></div>
+    <div class="import-kpi"><span>${t.detectedTotal}</span><strong>${money(total)}</strong></div>
+    <div class="import-kpi"><span>${t.ignoredCredits}</span><strong>${ignored}</strong></div>`;
+  if (!parsedImports.length) { $('importPreview').innerHTML = `<div class="empty">${t.noDetected}</div>`; $('importParsed').disabled = true; return; }
+  $('importParsed').disabled = false;
+  $('importPreview').innerHTML = `<div class="empty">${t.previewLimit}</div>` + parsedImports.slice(0, 40).map((item, idx) => `
+    <div class="preview-row">
+      <div><b>${escapeHtml(item.name)}</b><small>${item.date || t.noDate}</small><div class="source">${t.importedFrom}: ${escapeHtml(item.source || '')}</div></div>
+      <span class="amount">${money(item.amount)}</span>
+      <select data-preview-category="${idx}">${categories.map(cat => `<option value="${cat}" ${cat === item.category ? 'selected' : ''}>${t.categories[cat]}</option>`).join('')}</select>
+      <small>${t.categories[item.category] || item.category}</small>
+      <button class="delete-btn" data-preview-delete="${idx}">${t.delete}</button>
+    </div>`).join('');
+  document.querySelectorAll('[data-preview-category]').forEach(sel => sel.addEventListener('change', () => { parsedImports[Number(sel.dataset.previewCategory)].category = sel.value; renderImportPreview(filesRead, ignored); }));
+  document.querySelectorAll('[data-preview-delete]').forEach(btn => btn.addEventListener('click', () => { parsedImports.splice(Number(btn.dataset.previewDelete), 1); renderImportPreview(filesRead, ignored); }));
+}
 
+function importParsedTransactions() {
+  const t = currentText();
+  const now = Date.now();
+  parsedImports.forEach((item, i) => state.transactions.push({ id: `${now}-${i}`, name: item.name, amount: Math.abs(Number(item.amount)), category: item.category, date: item.date, source: item.source }));
+  parsedImports = [];
+  saveState(); render();
+  $('importSummary').innerHTML = `<div class="import-kpi"><span>${t.importedOk}</span><strong>✓</strong></div>`;
+  $('importPreview').innerHTML = '';
+  $('importParsed').disabled = true;
+}
+
+function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `salary-radar-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); }
+function render() { applyLanguage(); updateSummary(); updateChart(); renderTransactions(); if (parsedImports.length) renderImportPreview(1, 0); }
+
+$('languageToggle').addEventListener('click', () => { state.language = state.language === 'ar' ? 'en' : 'ar'; saveState(); render(); });
+$('saveSalary').addEventListener('click', () => { state.salary = Number($('salaryInput').value || 0); saveState(); render(); });
 $('addTransaction').addEventListener('click', addTransaction);
 $('exportData').addEventListener('click', exportData);
-$('resetMonth').addEventListener('click', () => {
-  const t = currentText();
-  if (confirm(t.confirmReset)) {
-    state.transactions = [];
-    saveState();
-    render();
-  }
-});
+$('analyzeFiles').addEventListener('click', analyzeFiles);
+$('importParsed').addEventListener('click', importParsedTransactions);
+$('resetMonth').addEventListener('click', () => { const t = currentText(); if (confirm(t.confirmReset)) { state.transactions = []; saveState(); render(); } });
 
 loadState();
 render();
