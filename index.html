@@ -6,6 +6,8 @@
   <title>Salary Radar | Budget Monitor</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs" type="module"></script>
 </head>
 <body>
   <main class="app-shell">
@@ -30,6 +32,21 @@
       <article class="stat-card danger"><span data-i18n="spent">Spent</span><strong id="spentAmount">SAR 0</strong><small id="spentPercent">0% of salary</small></article>
       <article class="stat-card calm"><span data-i18n="saved">Saved</span><strong id="savedAmount">SAR 0</strong><small id="savingsPercent">0% of salary</small></article>
       <article class="stat-card warning"><span data-i18n="dailySafeSpend">Daily safe spend</span><strong id="dailyBudget">SAR 0</strong><small data-i18n="dailyNote">For the rest of this month</small></article>
+    </section>
+
+    <section class="import-panel panel">
+      <div class="import-copy">
+        <p class="eyebrow" data-i18n="importEyebrow">Smart file import</p>
+        <h2 data-i18n="importTitle">Analyze bank / Visa files</h2>
+        <p data-i18n="importSubtitle">Upload Excel, CSV, or PDF statements. The analysis happens inside your browser before you import anything.</p>
+      </div>
+      <div class="upload-box">
+        <input id="statementFiles" type="file" accept=".xlsx,.xls,.csv,.pdf" multiple />
+        <button id="analyzeFiles" class="primary" data-i18n="analyzeFiles">Analyze files</button>
+        <button id="importParsed" class="ghost" data-i18n="importParsed" disabled>Import detected expenses</button>
+      </div>
+      <div id="importSummary" class="import-summary"></div>
+      <div id="importPreview" class="import-preview"></div>
     </section>
 
     <section class="dashboard-grid">
